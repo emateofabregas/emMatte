@@ -1,0 +1,773 @@
+add_layer {P P.X P.Y P.Z P.x P.green P.blue P.alpha P.X}
+add_layer {N N.X N.Y N.Z N.red N.green N.blue N.alpha}
+Group {
+name emMatte
+inputs 2
+onCreate "import nuke\n\n# Hidden extra position picker in Flare node (internally)\nflare_picker = nuke.toNode('Flare')\['position']\n\nif flare_picker:\n    flare_picker.setEnabled(False)\n    flare_picker.setVisible(False)"
+knobChanged "import nuke\n\nn = nuke.thisNode()\nk = nuke.thisKnob()\n\n#### Sanbox Var\npworld = nuke.toNode(f\"Input_PWorld\")\ncheckCamInput = nuke.toNode('InputCam')\ncheckCustomInput = nuke.toNode('InputCustomShape')\nshapeProjection =nuke.toNode('projectionShape')\nhidden_knobs = \[n\['position_3d'], n\['start_3d'], n\['end_3d']]\n\n#### Sandhox Hidden Knobs\nif n.knob('show_hidden_knobs'):\n    for h in hidden_knobs:\n        if n\['show_hidden_knobs'].value() == True:\n            h.setVisible(True)\n        else:\n            h.setVisible(False) \n\n#### Sanbox functions\ndef createInput(inputNode, input_name, nodeConnected, input):\n    \"\"\"\n    This function creates a new Input based on a specific name (input_name), connected to a specific node (nodeConnected) and following an input (input).\n    \n    Args:\n        inputNode(str): Input created or not.\n        input_name(str): Name of the Input.\n        nodeConnected(str): Node that you want to connect with the input.\n        input: Connection that you want to connect your input. \n    \n    Returns:\n        Input is created with a specific name, and position in the node graph and connected to the node with specific input.\n    \"\"\"\n    if not inputNode:\n        newInput = nuke.createNode('Input', f\"name \{input_name\}\", inpanel=False) # Create Input node \n                    \n        if input and newInput:\n            nodeConnected.setInput(input, newInput)                                  \n            # Adjust 'customInput' position relative to 'projectionShape'\n            newInput.setYpos(nodeConnected.ypos()-50)  # Adjusting Y-position, not X-position\n            newInput.setXpos(nodeConnected.xpos())\n        else:\n            # In case that input is None, just add a position to not connect the nodes.\n            newInput.setYpos(nodeConnected.ypos()-50)  # Adjusting Y-position, not X-position\n            newInput.setXpos(nodeConnected.xpos())            \n             \n            \n\ndef removeNode(node):\n    \"\"\"\n    This function removes a specific node that you add in the args.\n    \n    Args:\n        node(str): The node that you want to create it.\n    \n    Returns:\n        Node remove it.\n    \"\"\"\n\n    if node: \n        nuke.delete(node)  # Delete node if it exists \n\n\ndef dPos(picker_knob, pos_knob,nodeSample):\n    \"\"\"\n    This fuction takes the 2d knob (picker_knob) using nodeSample as a reference for set up 3D position info (pos_knob).\n    \n    Args:\n        picker_knob(x,y): 2d knob to use for search the position.\n        pos_knob(x,y,z): 3d knob put the values of the sampled for nodeSample.    \n        nodeSample(r,g,b): node to use the reference for sample values.    \n        \n    Returns:\n        Sampled values of nodeSample to pos_knob using picker_knob.\n    \"\"\"\n\n    pos = n\[picker_knob].value()  # The position picker_knob\n    animated = nuke.thisKnob().isAnimated() #If the knob is animated\n            \n    # Check if proxy mode is active\n    if nuke.root().knob('proxy').value():\n        nuke.message('You have to disable proxy mode to use this feature.')\n        \n    #Sample the P_World AOV to get the position\n    else:\n        r = nodeSample.sample('red',  pos\[0], pos\[1],)\n        g = nodeSample.sample('green', pos\[0], pos\[1])\n        b = nodeSample.sample('blue',  pos\[0], pos\[1])\n    \n    # Check the knob if it's animated               \n    if animated:\n        if not n.knob(pos_knob).isAnimated():\n            n.knob(pos_knob).setAnimated()\n        else:\n            n.knob(pos_knob).clearAnimated()\n                        \n    # Set the end_3d knob with the sampled values\n    n\[pos_knob].setValue(\[r, g, b])\n\n#### Knob changes\n### Matte type\nif k.name('matte_type'):\n    if n.knob('matte_type').value() == 'Shape':\n        ##Knob visibilities\n        n\['n_projection'].setVisible(False)\n        n\['shape'].setVisible(True)\n        n\['position'].setVisible(True)\n        n\['start'].setVisible(False)\n        n\['end'].setVisible(False)\n        n.knobs()\['translate'].setVisible(True)\n        n.knobs()\['rotate'].setVisible(True)\n        n.knobs()\['scaling'].setVisible(True)\n        n.knobs()\['uniform_scale'].setVisible(True)\n        n.knobs()\['skew'].setVisible(True)\n        n\['shape_projection'].setVisible(False)\n        n\['note'].setVisible(False)\n        n\['gap11'].setVisible(True)\n        n\['gap12'].setVisible(True) \n        n\['gap13'].setVisible(True)\n        n\['enable_noise'].setVisible(True)  \n        n\['noise_opacity'].setVisible(True) \n        n.knobs()\['corners'].setVisible(False)\n        n.knobs()\['flattening'].setVisible(False)\n        n.knobs()\['sharpness'].setVisible(False)\n        n.knobs()\['corners_angle'].setVisible(False)\n       \n        ## Remove Camera and Custom Input\n        if checkCamInput:\n            removeNode(checkCamInput)\n        if checkCustomInput:\n            removeNode(checkCustomInput)\n        \n        ##P_World\n        # Position pick and position into the P space\n        if k.name() == 'position':\n            dPos('position', 'position_3d', pworld)\n            \n            \n    elif n.knob('matte_type').value() == 'Ramp (Beta)':\n        ## Knob visibilities\n        n\['n_projection'].setVisible(False)\n        n\['shape'].setVisible(False)\n        n\['position'].setVisible(False)\n        n\['start'].setVisible(True)\n        n\['end'].setVisible(True)\n        n.knobs()\['translate'].setVisible(False)\n        n.knobs()\['rotate'].setVisible(False)\n        n.knobs()\['scaling'].setVisible(False)\n        n.knobs()\['uniform_scale'].setVisible(False)\n        n.knobs()\['skew'].setVisible(False)\n        n\['shape_projection'].setVisible(False)\n        n\['note'].setVisible(False)\n        n\['gap11'].setVisible(True)\n        n\['gap12'].setVisible(False) \n        n\['gap13'].setVisible(True)\n        n\['enable_noise'].setVisible(True)\n        n\['noise_opacity'].setVisible(True) \n        n.knobs()\['corners'].setVisible(False)\n        n.knobs()\['flattening'].setVisible(False)\n        n.knobs()\['sharpness'].setVisible(False)\n        n.knobs()\['corners_angle'].setVisible(False)  \n        \n        ## Remove Camera and Custon Input\n        if checkCamInput:\n            removeNode(checkCamInput)\n        if checkCustomInput:\n            removeNode(checkCustomInput)\n            \n        ## Ramp (Beta) pickers\n        # End Ramp Values pick and position into the P space\n        if k.name() == 'start':\n            dPos('start', 'start_3d', pworld)\n                     \n        # End Ramp Values pick and position into the P space\n        if k.name() == 'end':\n            dPos('end', 'end_3d', pworld)\n        \n        \n    elif n.knob('matte_type').value() == 'Pproject':\n        ## Knob visibilities\n        n\['n_projection'].setVisible(True)\n        n\['shape'].setVisible(False)\n        n\['position'].setVisible(False)\n        n\['start'].setVisible(False)\n        n\['end'].setVisible(False)\n        n.knobs()\['translate'].setVisible(True)\n        n.knobs()\['rotate'].setVisible(True)\n        n.knobs()\['scaling'].setVisible(True)\n        n.knobs()\['uniform_scale'].setVisible(True)\n        n.knobs()\['skew'].setVisible(True)\n        n\['shape_projection'].setVisible(True)\n        n\['note'].setVisible(False)\n        n\['gap11'].setVisible(True)\n        n\['gap12'].setVisible(True) \n        n\['gap13'].setVisible(True)\n        n\['enable_noise'].setVisible(True)\n        n\['noise_opacity'].setVisible(True)    \n        \n        removeNode(checkCamInput)\n        \n        ## Knob visibilities and create Custom Shape              \n        if n.knob('shape_projection').value() == 'Custom':\n            n.knobs()\['corners'].setVisible(False)\n            n.knobs()\['flattening'].setVisible(False)\n            n.knobs()\['sharpness'].setVisible(False)\n            n.knobs()\['corners_angle'].setVisible(False)\n            \n            if not checkCustomInput:\n                createInput(checkCustomInput, 'InputCustomShape', shapeProjection, 3)\n                \n        elif n.knob('shape_projection').value() == 'Flare':\n            removeNode(checkCustomInput)\n            n.knobs()\['corners'].setVisible(True)\n            n.knobs()\['flattening'].setVisible(True)\n            n.knobs()\['sharpness'].setVisible(True)\n            n.knobs()\['corners_angle'].setVisible(True)\n        else:\n            removeNode(checkCustomInput)\n            n.knobs()\['corners'].setVisible(False)\n            n.knobs()\['flattening'].setVisible(False)\n            n.knobs()\['sharpness'].setVisible(False)\n            n.knobs()\['corners_angle'].setVisible(False)\n    \n    elif n.knob('matte_type').value() == 'Pproject + cam':\n        ## Knob visibilities\n        n\['n_projection'].setVisible(True)\n        n\['shape'].setVisible(False)\n        n\['position'].setVisible(False)\n        n\['start'].setVisible(False)\n        n\['end'].setVisible(False)\n        n.knobs()\['translate'].setVisible(False)\n        n.knobs()\['rotate'].setVisible(False)\n        n.knobs()\['scaling'].setVisible(False)\n        n.knobs()\['uniform_scale'].setVisible(False)\n        n.knobs()\['skew'].setVisible(False)\n        n\['shape_projection'].setVisible(True)\n        n\['note'].setVisible(True)  \n        n\['gap11'].setVisible(True)\n        n\['gap12'].setVisible(False) \n        n\['gap13'].setVisible(True)\n        n\['enable_noise'].setVisible(True)\n        n\['noise_opacity'].setVisible(True)           \n        n.knobs()\['corners'].setVisible(False)\n        n.knobs()\['flattening'].setVisible(False)\n        n.knobs()\['sharpness'].setVisible(False)\n        n.knobs()\['corners_angle'].setVisible(False)\n        \n        ## Create Custom Shape Input + Knob visibilities of Flare OFF\n        if n.knob('shape_projection').value() == 'Custom':\n            if not checkCustomInput:\n                createInput(checkCustomInput, 'InputCustomShape', shapeProjection, 3)\n            n.knobs()\['corners'].setVisible(False)\n            n.knobs()\['flattening'].setVisible(False)\n            n.knobs()\['sharpness'].setVisible(False)\n            n.knobs()\['corners_angle'].setVisible(False)\n        \n        ## Remove Custon Shape Input + Knob visibilities of Knob visibilities of Flare ON\n        elif n.knob('shape_projection').value() == 'Flare':\n            if checkCustomInput:\n                removeNode(checkCustomInput)\n            n.knobs()\['corners'].setVisible(True)\n            n.knobs()\['flattening'].setVisible(True)\n            n.knobs()\['sharpness'].setVisible(True)\n            n.knobs()\['corners_angle'].setVisible(True)\n        \n        ## Remove Custon Shape Input + Knob visibilities of Flare OFF\n        else:\n            if checkCustomInput:\n                removeNode(checkCustomInput)\n            n.knobs()\['corners'].setVisible(False)\n            n.knobs()\['flattening'].setVisible(False)\n            n.knobs()\['sharpness'].setVisible(False)\n            n.knobs()\['corners_angle'].setVisible(False)\n        \n        ## Create Camera Input if it doesn't exists\n        if not checkCamInput:\n            createInput(checkCamInput, 'InputCam',nuke.toNode('Axis1'), False)     \n\n    elif n.knob('matte_type').value() == 'Noise 3D':\n        ## Knob visibilities\n        n\['n_projection'].setVisible(False)\n        n\['shape'].setVisible(False)\n        n\['position'].setVisible(False)\n        n\['start'].setVisible(False)\n        n\['end'].setVisible(False)\n        n.knobs()\['translate'].setVisible(False)\n        n.knobs()\['rotate'].setVisible(False)\n        n.knobs()\['scaling'].setVisible(False)\n        n.knobs()\['uniform_scale'].setVisible(False)\n        n.knobs()\['skew'].setVisible(False)\n        n\['shape_projection'].setVisible(False)\n        n\['note'].setVisible(False)\n        n\['gap11'].setVisible(False)\n        n\['gap12'].setVisible(False) \n        n\['gap13'].setVisible(False)\n        n\['enable_noise'].setVisible(False)\n        n\['noise_opacity'].setVisible(False)\n        n\['enable_noise'].setValue(True) \n        \n        ## Removing Inputs\n        if checkCamInput:\n            removeNode(checkCamInput)\n        if checkCustomInput:\n            removeNode(checkCustomInput)                \n\n### Enable Noise\nif k.name('enable_noise'):\n    ## Knob visibilities\n    knobs_noise =\[n\['noise_choice'], n\['noise_opacity'], n\['scale_master'], n\['scale_xyz'], n\['octaves'], n\['lacunarity'], n\['gain'], n\['random'], n\['enable_random']] # Knob list of noise\n    \n    for k in knobs_noise:\n        if n.knob('enable_noise').value() ==True:\n            k.setEnabled(True)\n        else:\n            k.setEnabled(False)\n\n### Noise choice knobs        \nif k.name('noise_choice'):\n    ## Knob visibilities\n    knobs_noise_choice =\[n\['octaves'], n\['lacunarity'], n\['gain']] # Knob list of noise\n    \n    for c in knobs_noise_choice:\n        if n.knob('noise_choice').value() =='Noise':\n            c.setVisible(False)\n        else:\n            c.setVisible(True)"
+tile_color 0xff00ff
+label "\[value matte_type]"
+addUserKnob {20 User l emMatte}
+addUserKnob {6 unpremultiply l Unpremultiply t "Unpremult the Alpha in the Matte." +STARTLINE}
+unpremultiply true
+addUserKnob {4 matte_type l "Matte Type" t "Different types of Mattes that you're able to make. \n- Shape: P Circular or P Box.\n- Ramp (Beta): Quick ramp to make in your renders.\n- Pproject: Simple projection that you can do using 3d knobs.\n- Pproject + cam: The same as before but with a 3D Camera.\n- Noise 3D: Noise based on position pass." M {Shape "Ramp (Beta)" Pproject "Pproject + cam" "Noise 3D" "" "" "" "" "" "" "" "" "" "" "" ""}}
+addUserKnob {26 gap11 l "" +STARTLINE}
+addUserKnob {6 n_projection l "N Projection" t "To get an accurate projection, this checkbox enables normals and makes the projection more accurate without stretching. " +HIDDEN +STARTLINE}
+n_projection true
+addUserKnob {4 shape_projection l "Shape Projection" t "Choose your shape for the projection." +HIDDEN M {Sphere Cube Flare Custom "" "" "" "" "" "" "" ""}}
+addUserKnob {41 corners +HIDDEN T Flare.corners}
+addUserKnob {41 flattening l "edge flattening" +HIDDEN T Flare.flattening}
+addUserKnob {41 sharpness l "corner sharpness" +HIDDEN T Flare.sharpness}
+addUserKnob {41 corners_angle l angle +HIDDEN T Flare.corners_angle}
+addUserKnob {4 shape l Shape t "Choose the Shape here." M {Sphere Cube "" "" "" "" "" "" ""}}
+addUserKnob {12 position l Position t "For picking the position for your mask."}
+position {960 540}
+addUserKnob {12 start l Start t "Place where the ramp starts (1)." +HIDDEN}
+start {1102 238}
+addUserKnob {12 end l End t "Place where the ramp ends (0)." +HIDDEN}
+end {748 612}
+addUserKnob {7 z_near l near +HIDDEN R 0 1000}
+z_near 493.4170532
+addUserKnob {7 z_far l far +HIDDEN R 0 1000}
+z_far 950.3838501
+addUserKnob {26 gap12 l "" +STARTLINE}
+addUserKnob {41 translate l Translate T Axis2.translate}
+addUserKnob {41 rotate l Rotate T Axis2.rotate}
+addUserKnob {41 scaling l Scale T Axis2.scaling}
+addUserKnob {41 uniform_scale l "Uniform Scale" T Axis2.uniform_scale}
+addUserKnob {41 skew l Skew T Axis2.skew}
+addUserKnob {26 note l " " +HIDDEN T "<b><font color=\"orange\"> For the projection, connect/check your 3D camera node, please!</font><b>"}
+addUserKnob {26 gap13 l "" +STARTLINE}
+addUserKnob {6 enable_noise l "Enable Noise" t "Enable the noise using this checkbox." +STARTLINE}
+addUserKnob {4 noise_choice l "Noice Choice" t "Different algorithmn of the noise: fBm, Turbulence, or classic Noise." +DISABLED M {fBm Turbulence Noise "" "" "" "" "" "" "" "" "" ""}}
+addUserKnob {7 noise_opacity l Opacity t "Controls opacity of the noise." +DISABLED}
+noise_opacity 1
+addUserKnob {7 scale_master l "Scale master" t "Modifies the scale of the noise." +DISABLED R 0 1000}
+scale_master 10
+addUserKnob {13 scale_xyz l "Scale xyz" t "Modifies the scale of the noise following the axis." +DISABLED}
+scale_xyz {1 1 1}
+addUserKnob {7 random l Random t "An additional algorithmn added." +DISABLED R 1 100}
+random 1
+addUserKnob {6 enable_random l "Enable Random" t "To enable the additional algorithmn added." -STARTLINE +DISABLED}
+addUserKnob {3 octaves l Octaves +DISABLED}
+octaves 8
+addUserKnob {7 lacunarity l Lacunarity +DISABLED R 0 10}
+lacunarity 1
+addUserKnob {7 gain l Gain +DISABLED R 0 4}
+gain 1
+addUserKnob {26 ""}
+addUserKnob {4 falloffType l "Falloff Type" t "Falloff algorithm." M {None Linear Cubic Quadratic Smooth Exponential "" "" "" "" "" "" "" "" "" "" "" ""}}
+falloffType Linear
+addUserKnob {7 falloff l Falloff t "A reduction (0-1) or decrease (+1)." R 0 4}
+falloff 1
+addUserKnob {6 color_panelDropped l "panel dropped state" +HIDDEN +STARTLINE}
+color_panelDropped true
+addUserKnob {6 color_rgb_panelDropped l "panel dropped state" -STARTLINE +HIDDEN}
+color_rgb_panelDropped true
+addUserKnob {26 ""}
+addUserKnob {26 _1 l mask T ""}
+addUserKnob {41 maskChannelInput_1 l "" -STARTLINE T Merge8.maskChannelInput}
+addUserKnob {41 inject_1 l inject -STARTLINE T Merge8.inject}
+addUserKnob {41 invert_mask_1 l invert -STARTLINE T Merge8.invert_mask}
+addUserKnob {41 fringe_1 l fringe -STARTLINE T Merge8.fringe}
+addUserKnob {41 mix_1 l mix T Merge8.mix}
+addUserKnob {26 ""}
+addUserKnob {26 autor l "" +STARTLINE T "<font color=\"grey\">emMatte v1.0 | emateofabregas.com | 2024 </font>"}
+addUserKnob {20 tab_tech_data l "Tech Data"}
+addUserKnob {41 in l P/Pref t "Set up your P or Pref AOVs here." T Input_PWorld.in}
+addUserKnob {41 in_1 l N t "Add the N pass here." T Input_N.in}
+addUserKnob {6 show_hidden_knobs l "Show Hidden Knobs" +INVISIBLE +STARTLINE}
+addUserKnob {13 position_3d +HIDDEN}
+position_3d {-14.62355232 3.369156599 -64.77342224}
+addUserKnob {13 start_3d +HIDDEN}
+start_3d {205.5515442 -244.4851532 -9545.388672}
+addUserKnob {13 end_3d +HIDDEN}
+end_3d {-703.3588257 676.5328369 -22031.80078}
+}
+Input {
+inputs 0
+name InputImg
+label 0
+xpos 384
+ypos -219
+}
+Dot {
+name Dot3
+xpos 418
+ypos -160
+}
+set Ne7d65400 [stack 0]
+Dot {
+name Dot6
+xpos 418
+ypos 275
+}
+set Ne7d65800 [stack 0]
+Dot {
+name Dot1
+xpos 418
+ypos 720
+}
+set Ne7d65c00 [stack 0]
+Dot {
+name Dot4
+xpos -157
+ypos 720
+}
+Input {
+inputs 0
+name Mask
+xpos -68
+ypos 790
+number 1
+}
+Switch {
+inputs 2
+which 1
+name SwitchMask
+xpos -191
+ypos 790
+disable {{"\[exists parent.input1]"}}
+}
+push $Ne7d65400
+AddChannels {
+channels alpha
+color 1
+format_size true
+name AddChannels1
+xpos -131
+ypos -169
+}
+Shuffle {
+in P
+in2 rgba
+alpha alpha2
+name Input_PWorld
+xpos -392
+ypos -163
+}
+set Ne7daac00 [stack 0]
+Dot {
+name Dot5
+xpos -867
+ypos -160
+}
+Grade {
+channels rgba
+white {{parent.scale_xyz} {parent.scale_xyz} {parent.scale_xyz} 1}
+black_clamp false
+name scale_xyz
+xpos -901
+ypos 357
+}
+set Ne7dab400 [stack 0]
+Expression {
+channel3 rgba
+expr3 noise(r*(scale_master*0.01),g*(scale_master*0.01),b*(scale_master*0.01))
+name Pnoise
+xpos -795
+ypos 395
+cached true
+addUserKnob {20 User}
+addUserKnob {7 scale_master l "scale master" R 0 1000}
+scale_master {{parent.scale_master*0.5}}
+}
+push $Ne7dab400
+Expression {
+channel3 rgba
+expr3 "turbulence(r*scale_master, g*scale_master, b*scale_master, parent.octaves, parent.lacunarity, parent.gain)"
+name Turbulence
+xpos -901
+ypos 395
+cached true
+addUserKnob {20 User}
+addUserKnob {7 scale_master l "scale master"}
+scale_master {{parent.scale_master*0.01}}
+}
+push $Ne7dab400
+Expression {
+channel3 rgba
+expr3 "fBm (r*scale_master, g*scale_master, b*scale_master, parent.octaves, parent.lacunarity, parent.gain)"
+name Fbm
+xpos -1015
+ypos 393
+cached true
+addUserKnob {20 User}
+addUserKnob {7 scale_master l "scale master" R 0 1000}
+scale_master {{parent.scale_master*0.01}}
+}
+Switch {
+inputs 3
+which {{parent.noise_choice}}
+name Switch1
+xpos -901
+ypos 436
+}
+Expression {
+expr3 "random (r*parent.random, g*parent.random, b*parent.random)"
+name Random
+xpos -901
+ypos 473
+disable {{!parent.enable_random}}
+}
+Expression {
+channel3 rgba
+expr3 a
+name a_to_rgba
+xpos -901
+ypos 521
+}
+Constant {
+inputs 0
+color 1
+name Constant2
+xpos -274
+ypos 271
+}
+Constant {
+inputs 0
+color {{parent.Axis1.world_matrix.2} {parent.Axis1.world_matrix.6} {parent.Axis1.world_matrix.10} {curve}}
+name Constant1
+xpos 314
+ypos 285
+}
+push $Ne7d65800
+Shuffle {
+in N
+in2 rgba
+alpha alpha2
+name Input_N
+xpos 194
+ypos 272
+}
+Merge2 {
+inputs 2
+operation multiply
+name Merge5
+xpos 194
+ypos 309
+}
+Saturation {
+saturation 0
+mode Maximum
+name Saturation1
+xpos 194
+ypos 353
+}
+Expression {
+expr3 clamp(r+g+b)
+name luma_alpha
+xpos 194
+ypos 397
+}
+push $Ne7daac00
+Unpremult {
+name Unpremult1
+xpos -392
+ypos -109
+disable {{!parent.unpremultiply}}
+}
+set Ne7e86400 [stack 0]
+Add {
+channels rgb
+value {{"parent.matte_type == 3 ? -parent.Axis1.matrix.3 : -parent.Axis2.matrix.3 "} {"parent.matte_type == 3 ? -parent.Axis1.matrix.7 : -parent.Axis2.matrix.7"} {"parent.matte_type == 3 ? -parent.Axis1.matrix.11 : -parent.Axis2.matrix.11"} {curve}}
+name Translate_Pivot1
+xpos -153
+ypos -109
+}
+ColorMatrix {
+matrix {
+    {{"parent.matte_type == 3 ? -parent.Axis1.matrix.0 : -parent.Axis2.matrix.0"} {"parent.matte_type == 3 ? -parent.Axis1.matrix.1 : -parent.Axis2.matrix.1 "} {"parent.matte_type == 3 ? -parent.Axis1.matrix.2 : -parent.Axis2.matrix.2 "}}
+    {{"parent.matte_type == 3 ? -parent.Axis1.matrix.4 : -parent.Axis2.matrix.4"} {"parent.matte_type == 3 ? -parent.Axis1.matrix.5 : -parent.Axis2.matrix.5"} {"parent.matte_type == 3 ? -parent.Axis1.matrix.6 : -parent.Axis2.matrix.6 "}}
+    {{"parent.matte_type == 3 ? -parent.Axis1.matrix.8 : -parent.Axis2.matrix.8"} {"parent.matte_type == 3 ? -parent.Axis1.matrix.9 : -parent.Axis2.matrix.9"} {"parent.matte_type == 3 ? -parent.Axis1.matrix.10 : -parent.Axis2.matrix.10 "}}
+  }
+invert true
+name RotationScalesSkew_projection
+xpos -153
+ypos 191
+}
+push $Ne7e86400
+add_layer {matrix0 matrix0.0 matrix0.1 matrix0.2 matrix0.3}
+add_layer {matrix1 matrix1.0 matrix1.1 matrix1.2 matrix1.3}
+add_layer {matrix2 matrix2.0 matrix2.1 matrix2.2 matrix2.3}
+add_layer {matrix3 matrix3.0 matrix3.1 matrix3.2 matrix3.3}
+AddChannels {
+channels matrix0
+channels2 matrix1
+channels3 matrix2
+channels4 matrix3
+name AddChannels2
+xpos -36
+ypos -75
+}
+set Ne7e87000 [stack 0]
+Expression {
+channel0 {matrix0.0 -matrix0.1 -matrix0.2 -matrix0.3}
+expr0 Axis1.world_matrix.0
+channel1 {-matrix0.0 matrix0.1 -matrix0.2 -matrix0.3}
+expr1 Axis1.world_matrix.1
+channel2 {-matrix0.0 -matrix0.1 matrix0.2 -matrix0.3}
+expr2 Axis1.world_matrix.2
+channel3 {-matrix0.0 -matrix0.1 -matrix0.2 matrix0.3}
+expr3 Axis1.world_matrix.3
+name Matrix4_0
+xpos 85
+ypos -69
+}
+Expression {
+channel0 {matrix1.0 -matrix1.1 -matrix1.2 -matrix1.3}
+expr0 Axis1.world_matrix.4
+channel1 {-matrix1.0 matrix1.1 -matrix1.2 -matrix1.3}
+expr1 Axis1.world_matrix.5
+channel2 {-matrix1.0 -matrix1.1 matrix1.2 -matrix1.3}
+expr2 Axis1.world_matrix.6
+channel3 {-matrix1.0 -matrix1.1 -matrix1.2 matrix1.3}
+expr3 Axis1.world_matrix.7
+name Matrix4_1
+xpos 85
+ypos -33
+}
+Expression {
+channel0 {matrix2.0 -matrix2.1 -matrix2.2 -matrix2.3}
+expr0 Axis1.world_matrix.8
+channel1 {-matrix2.0 matrix2.1 -matrix2.2 -matrix2.3}
+expr1 Axis1.world_matrix.9
+channel2 {-matrix2.0 -matrix2.1 matrix2.2 -matrix2.3}
+expr2 Axis1.world_matrix.10
+channel3 {-matrix2.0 -matrix2.1 -matrix2.2 matrix2.3}
+expr3 Axis1.world_matrix.11
+name Matrix4_2
+xpos 85
+ypos 3
+}
+Expression {
+channel0 {matrix3.0 -matrix3.1 -matrix3.2 -matrix3.3}
+expr0 Axis1.world_matrix.12
+channel1 {-matrix3.0 matrix3.1 -matrix3.2 -matrix3.3}
+expr1 Axis1.world_matrix.13
+channel2 {-matrix3.0 -matrix3.1 matrix3.2 -matrix3.3}
+expr2 Axis1.world_matrix.14
+channel3 {-matrix3.0 -matrix3.1 -matrix3.2 matrix3.3}
+expr3 Axis1.world_matrix.15
+name Matrix4_3
+xpos 85
+ypos 39
+}
+set Ne7eca000 [stack 0]
+push $Ne7eca000
+push $Ne7eca000
+push $Ne7eca000
+push $Ne7e87000
+Merge2 {
+inputs 2
+operation plus
+Achannels matrix0
+mix {{"parent.Axis1.world_matrix.0 == 1 ? 0 : (parent.Axis1.world_matrix.0 <=1 ? 1-parent.Axis1.world_matrix.0 : 1)"}}
+name Merge2
+xpos -36
+ypos -3
+}
+Merge2 {
+inputs 2
+operation plus
+Achannels matrix1
+mix {{"parent.Axis1.world_matrix.5 == 1 ? 0 : (parent.Axis1.world_matrix.5 <=1 ? 1-parent.Axis1.world_matrix.5 : 1)"}}
+name Merge3
+xpos -36
+ypos 39
+}
+Merge2 {
+inputs 2
+operation plus
+Achannels matrix2
+mix {{"parent.Axis1.world_matrix.10 == 1 ? 0 : (parent.Axis1.world_matrix.10 <=1 ? 1-parent.Axis1.world_matrix.10 : 1)"}}
+name Merge4
+xpos -36
+ypos 89
+}
+Merge2 {
+inputs 2
+operation plus
+Achannels matrix3
+mix {{"parent.Axis1.world_matrix.13 == 1 ? 0 : (parent.Axis1.world_matrix.13 <=1 ? 1-parent.Axis1.world_matrix.13 : 1)"}}
+name Merge9
+xpos -36
+ypos 140
+}
+Switch {
+inputs 2
+which 1
+name SwitchProjections
+xpos -36
+ypos 191
+disable {{"!parent.matte_type == 3"}}
+}
+Expression {
+expr0 "(r+1 )/ 2"
+expr1 "(g+1 )/ 2"
+expr2 0
+name UV_pass
+label "\[knob expr3]"
+xpos -36
+ypos 252
+}
+Reformat {
+inputs 0
+pbb true
+name Reformat1
+label "\[value filter]"
+xpos 207
+ypos 47
+}
+set Ne7ecb800 [stack 0]
+Flare {
+position {{root.width/2} {root.height/2}}
+inner_color 1
+corners 3
+flattening 1
+sharpness 1
+name Flare
+label "position knob hidden and block"
+xpos 112
+ypos 103
+cached true
+}
+push $Ne7ecb800
+Rectangle {
+area {0 0 512 512}
+softness 100
+name Box
+xpos 207
+ypos 128
+}
+push $Ne7ecb800
+Radial {
+area {0 0 512 512}
+name Radial
+xpos 284
+ypos 168
+}
+Switch {
+inputs 3
+which {{parent.shape_projection}}
+name projectionShape
+xpos 112
+ypos 168
+}
+Expression {
+expr3 r+g+b
+name Expression1
+label "\[knob expr3]"
+xpos 112
+ypos 214
+disable {{"\[exists parent.input3]"}}
+}
+STMap {
+inputs 2
+channels rgba
+uv rgb
+name STMap1
+xpos -36
+ypos 306
+}
+Merge2 {
+inputs 2
+operation multiply
+name Merge6
+xpos -36
+ypos 397
+disable {{!parent.n_projection}}
+}
+set Ne7f0d800 [stack 0]
+push $Ne7f0d800
+push $Ne7e86400
+ColorMatrix {
+matrix {
+    {1 0 0}
+    {0 1 0}
+    {{atan2(parent.Start.value.r,parent.Start.value.b)*2.278} 0 1}
+  }
+name Rotate_Start
+xpos -290
+ypos -27
+}
+Add {
+channels rgb
+value {{-parent.start_3d.x} {-parent.start_3d.y} {-parent.start_3d.z} 0}
+name Start
+xpos -290
+ypos 26
+cached true
+}
+Grade {
+whitepoint {{parent.Start.value} {parent.Start.value} {parent.Start.value} {parent.Start.value}}
+maskChannelInput -rgba.alpha
+name start_whitepoint
+xpos -290
+ypos 79
+}
+Expression {
+channel3 rgba
+expr3 smoothstep(0,1,b)
+name start_normalize
+xpos -290
+ypos 229
+}
+push $Ne7e86400
+ColorMatrix {
+matrix {
+    {1 0 0}
+    {0 1 0}
+    {{-atan2(parent.End.value.r,parent.End.value.b)*2.78} 0 1}
+  }
+name Rotate_End
+xpos -392
+ypos -26
+}
+Add {
+channels rgb
+value {{-parent.end_3d.x} {-parent.end_3d.y} {-parent.end_3d.z} 0}
+name End
+xpos -392
+ypos 27
+cached true
+}
+Grade {
+whitepoint {{parent.End.value} {parent.End.value} {parent.End.value} {parent.End.value}}
+maskChannelInput -rgba.alpha
+name end_whitepoint
+xpos -392
+ypos 80
+}
+Expression {
+channel3 rgba
+expr3 smoothstep(0,5,b)
+name end_normalize
+xpos -391
+ypos 154
+}
+Invert {
+channels rgba
+clamp true
+name Invert1
+xpos -391
+ypos 213
+}
+Merge2 {
+inputs 2
+operation from
+name Merge1
+xpos -391
+ypos 284
+}
+push $Ne7e86400
+Add {
+channels rgb
+value {{-parent.position_3d.x} {-parent.position_3d.y} {-parent.position_3d.z} 0}
+name Sample
+xpos -619
+ypos -43
+cached true
+}
+Add {
+channels rgb
+value {{-parent.Axis2.matrix.3} {-parent.Axis2.matrix.7} {-parent.Axis2.matrix.11} {curve}}
+name Translate_Pivot
+xpos -619
+ypos 53
+}
+ColorMatrix {
+matrix {
+    {{parent.Axis2.matrix.0} {parent.Axis2.matrix.1} {parent.Axis2.matrix.2}}
+    {{parent.Axis2.matrix.4} {parent.Axis2.matrix.5} {parent.Axis2.matrix.6}}
+    {{parent.Axis2.matrix.8} {parent.Axis2.matrix.9} {parent.Axis2.matrix.10}}
+  }
+invert true
+name RotationScalesSkew
+xpos -619
+ypos 136
+}
+set Ne7fb2c00 [stack 0]
+Expression {
+channel3 rgba
+expr3 1-max(abs(r),abs(g),abs(b))
+name Cube3D
+xpos -619
+ypos 215
+cached true
+}
+push $Ne7fb2c00
+Expression {
+channel3 rgba
+expr3 1-(sqrt((r*r)+(g*g)+(b*b)))
+name Sphere3D
+xpos -731
+ypos 213
+cached true
+}
+Switch {
+inputs 2
+which {{parent.shape}}
+name Switch_shape
+xpos -619
+ypos 397
+}
+Switch {
+inputs 5
+which {{parent.matte_type}}
+name Switch_mode
+xpos -391
+ypos 397
+}
+Merge2 {
+inputs 2
+operation multiply
+mix {{"parent.matte_type==4 ? 1 : parent.noise_opacity"}}
+name Merge7
+xpos -391
+ypos 521
+disable {{!parent.enable_noise}}
+}
+Expression {
+channel3 rgba
+expr3 a/parent.falloff
+name Falloff
+xpos -391
+ypos 594
+}
+set Ne7fb3c00 [stack 0]
+Expression {
+channel3 rgba
+expr3 pow(a,parent.exp)
+name Exponential
+xpos -157
+ypos 663
+}
+push $Ne7fb3c00
+Expression {
+channel3 rgba
+expr3 smoothstep(0,1,a)
+name Smooth
+xpos -254
+ypos 663
+}
+push $Ne7fb3c00
+Expression {
+channel3 rgba
+expr3 pow2(a),0,1
+name Quadratic
+xpos -349
+ypos 661
+}
+push $Ne7fb3c00
+Expression {
+channel3 rgba
+expr3 clamp((a**3),0,1)
+maskChannelInput -rgba.alpha
+name Cubic
+xpos -445
+ypos 663
+}
+push $Ne7fb3c00
+NoOp {
+name Lineal
+xpos -538
+ypos 664
+}
+push $Ne7fb3c00
+Expression {
+channel3 rgba
+expr3 a*abs(x)
+name None
+xpos -636
+ypos 663
+}
+Switch {
+inputs 6
+which {{parent.falloffType}}
+name Switch_Falloff_Type
+xpos -390
+ypos 746
+}
+Expression {
+channel3 rgba
+expr3 clamp(a)
+name Clamp
+xpos -390
+ypos 823
+}
+Dot {
+name Dot2
+xpos -356
+ypos 871
+}
+Merge2 {
+inputs 2
+operation mask
+name Merge8
+xpos -191
+ypos 868
+}
+Remove {
+operation keep
+channels alpha
+name Remove2
+label "\[value channels]"
+xpos -81
+ypos 856
+}
+push $Ne7d65c00
+Copy {
+inputs 2
+from0 rgba.alpha
+to0 rgba.alpha
+channels all
+name Copy1
+xpos 384
+ypos 856
+}
+Output {
+name Output2
+xpos 384
+ypos 952
+}
+Output {
+name Output1
+xpos 384
+ypos 1006
+}
+Axis3 {
+inputs 0
+uniform_scale 10
+name Axis2
+label Generic
+xpos -98
+ypos -10
+}
+Axis3 {
+inputs 0
+translate {{"\[exists parent.input2.translate.x] ? parent.input2.translate.x : 0"} {"\[exists parent.input2.translate.y] ? parent.input2.translate.y : 0"} {"\[exists parent.input2.translate.z] ? parent.input2.translate.z : 0"}}
+rotate {{"\[exists parent.input2.rotate.x] ? parent.input2.rotate.x : 0"} {"\[exists parent.input2.rotate.y] ? parent.input2.rotate.y : 0"} {"\[exists parent.input2.rotate.z] ? parent.input2.rotate.z : 0"}}
+scaling {{"\[exists parent.input2.scale.x] ? parent.input2.scale.x : 1"} {"\[exists parent.input2.scale.y] ? parent.input2.scale.y : 1"} {"\[exists parent.input2.scale.z] ? parent.input2.scale.z : 1"}}
+uniform_scale {{"\[exists parent.input2.uniform_scale] ? parent.input2.uniform_scale : 1"}}
+skew {{"\[exists parent.input2.skew.x] ? parent.input2.skew.x : 0"} {"\[exists parent.input2.skew.y] ? parent.input2.skew.y : 0"} {"\[exists parent.input2.skew.z] ? parent.input2.skew.z : 0"}}
+pivot_translate {{"\[exists parent.input2.pivot_translate.x] ? parent.input2.pivot_translate.x : 0"} {"\[exists parent.input2.pivot_translate.y] ? parent.input2.pivot_translate.y : 0"} {"\[exists parent.input2.pivot_translate.z] ? parent.input2.pivot_translate.z : 0"}}
+pivot_rotate {{"\[exists parent.input2.pivot_rotate.x] ? parent.input2.pivot_rotate.x : 0"} {"\[exists parent.input2.pivot_rotate.y] ? parent.input2.pivot_rotate.y : 0"} {"\[exists parent.input2.pivot_rotate.z] ? parent.input2.pivot_rotate.z : 0"}}
+name Axis1
+label Projection
+xpos 225
+ypos -48
+}
+push $Ne7daac00
+push 0
+Viewer {
+inputs 2
+frame_range 1-150
+input_number 1
+viewerProcess "sRGB (ACES)"
+monitorOutNDISenderName "NukeX - emTools_v039 - Viewer1"
+name Viewer1
+xpos -509
+ypos 215
+}
+end_group
