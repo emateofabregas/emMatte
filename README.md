@@ -1,4 +1,4 @@
-# emMatte v1.0
+# emMatte v1.1
 
 ![emMatte_001](https://github.com/user-attachments/assets/063da2e1-84bb-4096-93a8-1e490ef16aed)
 _Sphere shape + Noise applied_
@@ -28,3 +28,6 @@ _Sphere shape + Noise applied_
 * You can also add a specific 'Mask' in your **'Mask Input'** if you need it.
 
 ![emMatte_Knobs](https://github.com/user-attachments/assets/cd381d70-5606-4033-b70f-3343e0fc88cb)
+
+## Updates v1.1:
+* Code optimization in knobChanged.
