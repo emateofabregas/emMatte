@@ -71,7 +71,7 @@ addUserKnob {41 invert_mask_1 l invert -STARTLINE T Merge8.invert_mask}
 addUserKnob {41 fringe_1 l fringe -STARTLINE T Merge8.fringe}
 addUserKnob {41 mix_1 l mix T Merge8.mix}
 addUserKnob {26 ""}
-addUserKnob {26 autor l "" +STARTLINE T "<font color=\"grey\">emMatte v1.1 | emateofabregas.com | 2024 </font>"}
+addUserKnob {26 autor l "" +STARTLINE T "<font color=\"grey\">emMatte v1.1 | emateofabregas | 2024 </font>"}
 addUserKnob {20 tab_tech_data l "Tech Data"}
 addUserKnob {41 in l P/Pref t "Set up your P or Pref AOVs here." T Input_AOV.in}
 addUserKnob {41 in_1 l N t "Add the N pass here." T Input_N.in}
